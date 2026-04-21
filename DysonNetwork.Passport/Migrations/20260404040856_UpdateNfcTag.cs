@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,9 +11,8 @@ namespace DysonNetwork.Passport.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "ix_nfc_tags_user_id",
-                table: "nfc_tags");
+            // 修改点：使用 IF EXISTS 安全删除索引，避免索引不存在时报错
+            migrationBuilder.Sql("DROP INDEX IF EXISTS ix_nfc_tags_user_id;");
 
             migrationBuilder.DropColumn(
                 name: "user_id",
