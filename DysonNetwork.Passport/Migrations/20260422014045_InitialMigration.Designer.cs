@@ -17,15 +17,15 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DysonNetwork.Passport.Migrations
 {
     [DbContext(typeof(AppDatabase))]
-    [Migration("20260404115001_AddLocationPin")]
-    partial class AddLocationPin
+    [Migration("20260422014045_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
@@ -161,9 +161,9 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasKey("Id")
                         .HasName("pk_account_achievements");
 
-                    b.HasIndex("AccountId", "AchievementDefinitionId")
+                    b.HasIndex("AccountId", "AchievementDefinitionId", "DeletedAt")
                         .IsUnique()
-                        .HasDatabaseName("ix_account_achievements_account_id_achievement_definition_id");
+                        .HasDatabaseName("ix_account_achievements_account_id_achievement_definition_id_d");
 
                     b.ToTable("account_achievements", (string)null);
                 });
@@ -392,7 +392,7 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasKey("Id")
                         .HasName("pk_account_quest_progresses");
 
-                    b.HasIndex("AccountId", "QuestDefinitionId", "PeriodKey")
+                    b.HasIndex("AccountId", "QuestDefinitionId", "PeriodKey", "DeletedAt")
                         .IsUnique()
                         .HasDatabaseName("ix_account_quest_progresses_account_id_quest_definition_id_per");
 
@@ -600,9 +600,9 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasKey("Id")
                         .HasName("pk_achievement_definitions");
 
-                    b.HasIndex("Identifier")
+                    b.HasIndex("Identifier", "DeletedAt")
                         .IsUnique()
-                        .HasDatabaseName("ix_achievement_definitions_identifier");
+                        .HasDatabaseName("ix_achievement_definitions_identifier_deleted_at");
 
                     b.ToTable("achievement_definitions", (string)null);
                 });
@@ -694,9 +694,9 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasKey("Id")
                         .HasName("pk_affiliation_spells");
 
-                    b.HasIndex("Spell")
+                    b.HasIndex("Spell", "DeletedAt")
                         .IsUnique()
-                        .HasDatabaseName("ix_affiliation_spells_spell");
+                        .HasDatabaseName("ix_affiliation_spells_spell_deleted_at");
 
                     b.ToTable("affiliation_spells", (string)null);
                 });
@@ -851,6 +851,10 @@ namespace DysonNetwork.Passport.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("location_name");
 
+                    b.Property<Guid?>("MeetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("meet_id");
+
                     b.Property<Dictionary<string, object>>("Metadata")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -873,6 +877,9 @@ namespace DysonNetwork.Passport.Migrations
 
                     b.HasIndex("AccountId", "Status")
                         .HasDatabaseName("ix_location_pins_account_id_status");
+
+                    b.HasIndex("MeetId", "Status")
+                        .HasDatabaseName("ix_location_pins_meet_id_status");
 
                     b.ToTable("location_pins", (string)null);
                 });
@@ -926,9 +933,9 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasKey("Id")
                         .HasName("pk_magic_spells");
 
-                    b.HasIndex("Spell")
+                    b.HasIndex("Spell", "DeletedAt")
                         .IsUnique()
-                        .HasDatabaseName("ix_magic_spells_spell");
+                        .HasDatabaseName("ix_magic_spells_spell_deleted_at");
 
                     b.ToTable("magic_spells", (string)null);
                 });
@@ -1097,9 +1104,9 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasKey("Id")
                         .HasName("pk_nearby_devices");
 
-                    b.HasIndex("UserId", "DeviceId")
+                    b.HasIndex("UserId", "DeviceId", "DeletedAt")
                         .IsUnique()
-                        .HasDatabaseName("ix_nearby_devices_user_id_device_id");
+                        .HasDatabaseName("ix_nearby_devices_user_id_device_id_deleted_at");
 
                     b.ToTable("nearby_devices", (string)null);
                 });
@@ -1163,9 +1170,9 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasIndex("TokenHash")
                         .HasDatabaseName("ix_nearby_presence_tokens_token_hash");
 
-                    b.HasIndex("DeviceId", "Slot")
+                    b.HasIndex("DeviceId", "Slot", "DeletedAt")
                         .IsUnique()
-                        .HasDatabaseName("ix_nearby_presence_tokens_device_id_slot");
+                        .HasDatabaseName("ix_nearby_presence_tokens_device_id_slot_deleted_at");
 
                     b.ToTable("nearby_presence_tokens", (string)null);
                 });
@@ -1435,7 +1442,7 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasKey("Id")
                         .HasName("pk_progress_event_receipts");
 
-                    b.HasIndex("EventId", "DefinitionType", "DefinitionIdentifier", "PeriodKey")
+                    b.HasIndex("EventId", "DefinitionType", "DefinitionIdentifier", "PeriodKey", "DeletedAt")
                         .IsUnique()
                         .HasDatabaseName("ix_progress_event_receipts_event_id_definition_type_definition");
 
@@ -1522,9 +1529,9 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasKey("Id")
                         .HasName("pk_progress_reward_grants");
 
-                    b.HasIndex("RewardToken")
+                    b.HasIndex("RewardToken", "DeletedAt")
                         .IsUnique()
-                        .HasDatabaseName("ix_progress_reward_grants_reward_token");
+                        .HasDatabaseName("ix_progress_reward_grants_reward_token_deleted_at");
 
                     b.ToTable("progress_reward_grants", (string)null);
                 });
@@ -1635,9 +1642,9 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasKey("Id")
                         .HasName("pk_quest_definitions");
 
-                    b.HasIndex("Identifier")
+                    b.HasIndex("Identifier", "DeletedAt")
                         .IsUnique()
-                        .HasDatabaseName("ix_quest_definitions_identifier");
+                        .HasDatabaseName("ix_quest_definitions_identifier_deleted_at");
 
                     b.ToTable("quest_definitions", (string)null);
                 });
@@ -1710,9 +1717,9 @@ namespace DysonNetwork.Passport.Migrations
                     b.HasKey("Id")
                         .HasName("pk_realms");
 
-                    b.HasIndex("Slug")
+                    b.HasIndex("Slug", "DeletedAt")
                         .IsUnique()
-                        .HasDatabaseName("ix_realms_slug");
+                        .HasDatabaseName("ix_realms_slug_deleted_at");
 
                     b.ToTable("realms", (string)null);
                 });

@@ -249,6 +249,32 @@ namespace DysonNetwork.Passport.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "location_pins",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    meet_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    device_id = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    location_name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    location_address = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
+                    location = table.Column<Geometry>(type: "geometry (Geometry,4326)", nullable: true),
+                    visibility = table.Column<int>(type: "integer", nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    last_heartbeat_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
+                    expires_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    metadata = table.Column<Dictionary<string, object>>(type: "jsonb", nullable: false),
+                    keep_on_disconnect = table.Column<bool>(type: "boolean", nullable: false),
+                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
+                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_location_pins", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "magic_spells",
                 columns: table => new
                 {
@@ -321,7 +347,7 @@ namespace DysonNetwork.Passport.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     uid = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    account_id = table.Column<Guid>(type: "uuid", nullable: true),
                     label = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     is_active = table.Column<bool>(type: "boolean", nullable: false),
                     locked_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
@@ -787,21 +813,21 @@ namespace DysonNetwork.Passport.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "ix_account_achievements_account_id_achievement_definition_id",
+                name: "ix_account_achievements_account_id_achievement_definition_id_d",
                 table: "account_achievements",
-                columns: new[] { "account_id", "achievement_definition_id" },
+                columns: new[] { "account_id", "achievement_definition_id", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_account_quest_progresses_account_id_quest_definition_id_per",
                 table: "account_quest_progresses",
-                columns: new[] { "account_id", "quest_definition_id", "period_key" },
+                columns: new[] { "account_id", "quest_definition_id", "period_key", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_achievement_definitions_identifier",
+                name: "ix_achievement_definitions_identifier_deleted_at",
                 table: "achievement_definitions",
-                column: "identifier",
+                columns: new[] { "identifier", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -810,15 +836,25 @@ namespace DysonNetwork.Passport.Migrations
                 column: "spell_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_affiliation_spells_spell",
+                name: "ix_affiliation_spells_spell_deleted_at",
                 table: "affiliation_spells",
-                column: "spell",
+                columns: new[] { "spell", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_magic_spells_spell",
+                name: "ix_location_pins_account_id_status",
+                table: "location_pins",
+                columns: new[] { "account_id", "status" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_location_pins_meet_id_status",
+                table: "location_pins",
+                columns: new[] { "meet_id", "status" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_magic_spells_spell_deleted_at",
                 table: "magic_spells",
-                column: "spell",
+                columns: new[] { "spell", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -827,15 +863,15 @@ namespace DysonNetwork.Passport.Migrations
                 columns: new[] { "host_id", "status" });
 
             migrationBuilder.CreateIndex(
-                name: "ix_nearby_devices_user_id_device_id",
+                name: "ix_nearby_devices_user_id_device_id_deleted_at",
                 table: "nearby_devices",
-                columns: new[] { "user_id", "device_id" },
+                columns: new[] { "user_id", "device_id", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_nearby_presence_tokens_device_id_slot",
+                name: "ix_nearby_presence_tokens_device_id_slot_deleted_at",
                 table: "nearby_presence_tokens",
-                columns: new[] { "device_id", "slot" },
+                columns: new[] { "device_id", "slot", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -844,15 +880,15 @@ namespace DysonNetwork.Passport.Migrations
                 column: "token_hash");
 
             migrationBuilder.CreateIndex(
+                name: "ix_nfc_tags_account_id",
+                table: "nfc_tags",
+                column: "account_id");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_nfc_tags_uid",
                 table: "nfc_tags",
                 column: "uid",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "ix_nfc_tags_user_id",
-                table: "nfc_tags",
-                column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_permission_nodes_group_id",
@@ -867,19 +903,19 @@ namespace DysonNetwork.Passport.Migrations
             migrationBuilder.CreateIndex(
                 name: "ix_progress_event_receipts_event_id_definition_type_definition",
                 table: "progress_event_receipts",
-                columns: new[] { "event_id", "definition_type", "definition_identifier", "period_key" },
+                columns: new[] { "event_id", "definition_type", "definition_identifier", "period_key", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_progress_reward_grants_reward_token",
+                name: "ix_progress_reward_grants_reward_token_deleted_at",
                 table: "progress_reward_grants",
-                column: "reward_token",
+                columns: new[] { "reward_token", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_quest_definitions_identifier",
+                name: "ix_quest_definitions_identifier_deleted_at",
                 table: "quest_definitions",
-                column: "identifier",
+                columns: new[] { "identifier", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -893,9 +929,9 @@ namespace DysonNetwork.Passport.Migrations
                 column: "label_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_realms_slug",
+                name: "ix_realms_slug_deleted_at",
                 table: "realms",
-                column: "slug",
+                columns: new[] { "slug", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -936,6 +972,9 @@ namespace DysonNetwork.Passport.Migrations
 
             migrationBuilder.DropTable(
                 name: "experience_records");
+
+            migrationBuilder.DropTable(
+                name: "location_pins");
 
             migrationBuilder.DropTable(
                 name: "magic_spells");

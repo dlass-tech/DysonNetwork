@@ -16,8 +16,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DysonNetwork.Sphere.Migrations
 {
     [DbContext(typeof(AppDatabase))]
-    [Migration("20260411055352_AddDeletedAtToUniqueIndexes")]
-    partial class AddDeletedAtToUniqueIndexes
+    [Migration("20260422014126_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1854,16 +1854,6 @@ namespace DysonNetwork.Sphere.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("picture");
 
-                    b.Property<string>("PrivateKeyPem")
-                        .HasMaxLength(8192)
-                        .HasColumnType("character varying(8192)")
-                        .HasColumnName("private_key_pem");
-
-                    b.Property<string>("PublicKeyPem")
-                        .HasMaxLength(8192)
-                        .HasColumnType("character varying(8192)")
-                        .HasColumnName("public_key_pem");
-
                     b.Property<Guid?>("RealmId")
                         .HasColumnType("uuid")
                         .HasColumnName("realm_id");
@@ -2350,7 +2340,7 @@ namespace DysonNetwork.Sphere.Migrations
                     b.ToTable("sticker_pack_ownerships", (string)null);
                 });
 
-            modelBuilder.Entity("DysonNetwork.Sphere.ActivityPub.DeliveryDeadLetter", b =>
+            modelBuilder.Entity("DysonNetwork.Sphere.ActivityPub.Services.DeliveryDeadLetter", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()

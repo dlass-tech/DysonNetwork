@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using DysonNetwork.Shared.Geometry;
 using DysonNetwork.Shared.Models;
 using Microsoft.EntityFrameworkCore.Migrations;
 using NodaTime;
@@ -64,6 +63,26 @@ namespace DysonNetwork.Sphere.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_automod_rules", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "delivery_dead_letters",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    delivery_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    inbox_uri = table.Column<string>(type: "text", nullable: false),
+                    actor_uri = table.Column<string>(type: "text", nullable: false),
+                    activity_type = table.Column<string>(type: "text", nullable: false),
+                    activity_payload = table.Column<string>(type: "text", nullable: false),
+                    error_message = table.Column<string>(type: "text", nullable: true),
+                    retry_count = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
+                    failed_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_delivery_dead_letters", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -209,12 +228,12 @@ namespace DysonNetwork.Sphere.Migrations
                     background = table.Column<SnCloudFileReferenceObject>(type: "jsonb", nullable: true),
                     verification = table.Column<SnVerificationMark>(type: "jsonb", nullable: true),
                     meta = table.Column<Dictionary<string, object>>(type: "jsonb", nullable: true),
-                    private_key_pem = table.Column<string>(type: "character varying(8192)", maxLength: 8192, nullable: true),
-                    public_key_pem = table.Column<string>(type: "character varying(8192)", maxLength: 8192, nullable: true),
                     account_id = table.Column<Guid>(type: "uuid", nullable: true),
                     realm_id = table.Column<Guid>(type: "uuid", nullable: true),
                     shadowban_reason = table.Column<int>(type: "integer", nullable: true),
                     shadowbanned_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    gatekept_follows = table.Column<bool>(type: "boolean", nullable: true),
+                    moderate_subscription = table.Column<bool>(type: "boolean", nullable: true),
                     created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
                     deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
@@ -222,217 +241,6 @@ namespace DysonNetwork.Sphere.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_publishers", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "sn_account_auth_factor",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    type = table.Column<int>(type: "integer", nullable: false),
-                    secret = table.Column<string>(type: "character varying(8196)", maxLength: 8196, nullable: true),
-                    config = table.Column<Dictionary<string, object>>(type: "jsonb", nullable: true),
-                    trustworthy = table.Column<int>(type: "integer", nullable: false),
-                    enabled_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    expired_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_sn_account_auth_factor", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "sn_account_badge",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    type = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
-                    label = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    caption = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: true),
-                    meta = table.Column<Dictionary<string, object>>(type: "jsonb", nullable: false),
-                    activated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    expired_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_sn_account_badge", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "sn_account_connection",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    provider = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: false),
-                    provided_identifier = table.Column<string>(type: "character varying(8192)", maxLength: 8192, nullable: false),
-                    meta = table.Column<Dictionary<string, object>>(type: "jsonb", nullable: false),
-                    access_token = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: true),
-                    refresh_token = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: true),
-                    last_used_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_sn_account_connection", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "sn_account_contact",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    type = table.Column<int>(type: "integer", nullable: false),
-                    verified_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    is_primary = table.Column<bool>(type: "boolean", nullable: false),
-                    is_public = table.Column<bool>(type: "boolean", nullable: false),
-                    content = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
-                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_sn_account_contact", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "sn_account_profile",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    first_name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    middle_name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    last_name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    bio = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: true),
-                    gender = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    pronouns = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    time_zone = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    location = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    links = table.Column<List<SnProfileLink>>(type: "jsonb", nullable: true),
-                    username_color = table.Column<UsernameColor>(type: "jsonb", nullable: true),
-                    birthday = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    last_seen_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    verification = table.Column<SnVerificationMark>(type: "jsonb", nullable: true),
-                    active_badge = table.Column<SnAccountBadgeRef>(type: "jsonb", nullable: true),
-                    experience = table.Column<int>(type: "integer", nullable: false),
-                    social_credits = table.Column<double>(type: "double precision", nullable: false),
-                    picture = table.Column<SnCloudFileReferenceObject>(type: "jsonb", nullable: true),
-                    background = table.Column<SnCloudFileReferenceObject>(type: "jsonb", nullable: true),
-                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_sn_account_profile", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "sn_account_status",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    attitude = table.Column<int>(type: "integer", nullable: false),
-                    type = table.Column<int>(type: "integer", nullable: false),
-                    label = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    symbol = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    meta = table.Column<Dictionary<string, object>>(type: "jsonb", nullable: true),
-                    cleared_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    app_identifier = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: true),
-                    is_automated = table.Column<bool>(type: "boolean", nullable: false),
-                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_sn_account_status", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "sn_auth_challenge",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    expired_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    step_remain = table.Column<int>(type: "integer", nullable: false),
-                    step_total = table.Column<int>(type: "integer", nullable: false),
-                    failed_attempts = table.Column<int>(type: "integer", nullable: false),
-                    blacklist_factors = table.Column<string>(type: "jsonb", nullable: false),
-                    audiences = table.Column<string>(type: "jsonb", nullable: false),
-                    scopes = table.Column<string>(type: "jsonb", nullable: false),
-                    ip_address = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    user_agent = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    device_id = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
-                    device_name = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    platform = table.Column<int>(type: "integer", nullable: false),
-                    nonce = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    location = table.Column<GeoPoint>(type: "jsonb", nullable: true),
-                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_sn_auth_challenge", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "sn_auth_client",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    platform = table.Column<int>(type: "integer", nullable: false),
-                    device_name = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
-                    device_label = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    device_id = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
-                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_sn_auth_client", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "sn_realm",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    slug = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
-                    name = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
-                    description = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: false),
-                    is_community = table.Column<bool>(type: "boolean", nullable: false),
-                    is_public = table.Column<bool>(type: "boolean", nullable: false),
-                    picture = table.Column<SnCloudFileReferenceObject>(type: "jsonb", nullable: true),
-                    background = table.Column<SnCloudFileReferenceObject>(type: "jsonb", nullable: true),
-                    verification = table.Column<SnVerificationMark>(type: "jsonb", nullable: true),
-                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    boost_points = table.Column<decimal>(type: "numeric", nullable: false),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_sn_realm", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -458,9 +266,12 @@ namespace DysonNetwork.Sphere.Migrations
                     is_bot = table.Column<bool>(type: "boolean", nullable: false),
                     is_locked = table.Column<bool>(type: "boolean", nullable: false),
                     is_discoverable = table.Column<bool>(type: "boolean", nullable: false),
+                    is_community = table.Column<bool>(type: "boolean", nullable: false),
+                    realm_id = table.Column<Guid>(type: "uuid", nullable: true),
                     instance_id = table.Column<Guid>(type: "uuid", nullable: false),
                     last_fetched_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
                     last_activity_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    outbox_fetched_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
                     publisher_id = table.Column<Guid>(type: "uuid", nullable: true),
                     created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
@@ -675,6 +486,10 @@ namespace DysonNetwork.Sphere.Migrations
                     publisher_id = table.Column<Guid>(type: "uuid", nullable: false),
                     account_id = table.Column<Guid>(type: "uuid", nullable: false),
                     last_read_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    notify = table.Column<bool>(type: "boolean", nullable: false),
+                    ended_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    end_reason = table.Column<int>(type: "integer", nullable: true),
+                    ended_by_account_id = table.Column<Guid>(type: "uuid", nullable: true),
                     created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
                     deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
@@ -688,6 +503,42 @@ namespace DysonNetwork.Sphere.Migrations
                         principalTable: "publishers",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "publishing_settings",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    default_posting_publisher_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    default_reply_publisher_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    default_fediverse_publisher_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
+                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_publishing_settings", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_publishing_settings_publishers_default_fediverse_publisher_",
+                        column: x => x.default_fediverse_publisher_id,
+                        principalTable: "publishers",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "fk_publishing_settings_publishers_default_posting_publisher_id",
+                        column: x => x.default_posting_publisher_id,
+                        principalTable: "publishers",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "fk_publishing_settings_publishers_default_reply_publisher_id",
+                        column: x => x.default_reply_publisher_id,
+                        principalTable: "publishers",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -716,66 +567,29 @@ namespace DysonNetwork.Sphere.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "sn_auth_session",
+                name: "fediverse_keys",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    type = table.Column<int>(type: "integer", nullable: false),
-                    last_granted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    expired_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    audiences = table.Column<string>(type: "jsonb", nullable: false),
-                    scopes = table.Column<string>(type: "jsonb", nullable: false),
-                    ip_address = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    user_agent = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
-                    location = table.Column<GeoPoint>(type: "jsonb", nullable: true),
-                    account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    client_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    parent_session_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    challenge_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    app_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    key_id = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    key_pem = table.Column<string>(type: "TEXT", nullable: false),
+                    private_key_pem = table.Column<string>(type: "TEXT", nullable: true),
+                    algorithm = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    publisher_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    actor_id = table.Column<Guid>(type: "uuid", nullable: true),
                     created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
+                    rotated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
                     updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
                     deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_sn_auth_session", x => x.id);
+                    table.PrimaryKey("pk_fediverse_keys", x => x.id);
                     table.ForeignKey(
-                        name: "fk_sn_auth_session_sn_auth_client_client_id",
-                        column: x => x.client_id,
-                        principalTable: "sn_auth_client",
+                        name: "fk_fediverse_keys_fediverse_actors_actor_id",
+                        column: x => x.actor_id,
+                        principalTable: "fediverse_actors",
                         principalColumn: "id");
-                    table.ForeignKey(
-                        name: "fk_sn_auth_session_sn_auth_session_parent_session_id",
-                        column: x => x.parent_session_id,
-                        principalTable: "sn_auth_session",
-                        principalColumn: "id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "sn_realm_label",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    realm_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    name = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
-                    description = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: true),
-                    color = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
-                    icon = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    created_by_account_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_sn_realm_label", x => x.id);
-                    table.ForeignKey(
-                        name: "fk_sn_realm_label_sn_realm_realm_id",
-                        column: x => x.realm_id,
-                        principalTable: "sn_realm",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -789,8 +603,8 @@ namespace DysonNetwork.Sphere.Migrations
                     is_muting = table.Column<bool>(type: "boolean", nullable: false),
                     is_blocking = table.Column<bool>(type: "boolean", nullable: false),
                     followed_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    followed_back_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
                     reject_reason = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: true),
+                    realm_id = table.Column<Guid>(type: "uuid", nullable: true),
                     created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
                     deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
@@ -810,79 +624,6 @@ namespace DysonNetwork.Sphere.Migrations
                         principalTable: "fediverse_actors",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "posts",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    title = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    description = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: true),
-                    slug = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    edited_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    drafted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    published_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    visibility = table.Column<int>(type: "integer", nullable: false),
-                    content = table.Column<string>(type: "text", nullable: true),
-                    content_type = table.Column<int>(type: "integer", nullable: false),
-                    type = table.Column<int>(type: "integer", nullable: false),
-                    pin_mode = table.Column<int>(type: "integer", nullable: true),
-                    metadata = table.Column<Dictionary<string, object>>(type: "jsonb", nullable: true),
-                    sensitive_marks = table.Column<string>(type: "jsonb", nullable: true),
-                    embed_view = table.Column<PostEmbedView>(type: "jsonb", nullable: true),
-                    fediverse_uri = table.Column<string>(type: "character varying(8192)", maxLength: 8192, nullable: true),
-                    fediverse_type = table.Column<int>(type: "integer", nullable: true),
-                    language = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
-                    mentions = table.Column<List<ContentMention>>(type: "jsonb", nullable: true),
-                    boost_count = table.Column<int>(type: "integer", nullable: false),
-                    actor_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    views_unique = table.Column<int>(type: "integer", nullable: false),
-                    views_total = table.Column<int>(type: "integer", nullable: false),
-                    upvotes = table.Column<int>(type: "integer", nullable: false),
-                    downvotes = table.Column<int>(type: "integer", nullable: false),
-                    awarded_score = table.Column<decimal>(type: "numeric", nullable: false),
-                    replies_count = table.Column<int>(type: "integer", nullable: false),
-                    reaction_score = table.Column<int>(type: "integer", nullable: false),
-                    replied_gone = table.Column<bool>(type: "boolean", nullable: false),
-                    forwarded_gone = table.Column<bool>(type: "boolean", nullable: false),
-                    replied_post_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    forwarded_post_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    realm_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    attachments = table.Column<List<SnCloudFileReferenceObject>>(type: "jsonb", nullable: false),
-                    publisher_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    shadowban_reason = table.Column<int>(type: "integer", nullable: true),
-                    shadowbanned_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    locked_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
-                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
-                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_posts", x => x.id);
-                    table.ForeignKey(
-                        name: "fk_posts_fediverse_actors_actor_id",
-                        column: x => x.actor_id,
-                        principalTable: "fediverse_actors",
-                        principalColumn: "id");
-                    table.ForeignKey(
-                        name: "fk_posts_posts_forwarded_post_id",
-                        column: x => x.forwarded_post_id,
-                        principalTable: "posts",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "fk_posts_posts_replied_post_id",
-                        column: x => x.replied_post_id,
-                        principalTable: "posts",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "fk_posts_publishers_publisher_id",
-                        column: x => x.publisher_id,
-                        principalTable: "publishers",
-                        principalColumn: "id");
                 });
 
             migrationBuilder.CreateTable(
@@ -1055,12 +796,6 @@ namespace DysonNetwork.Sphere.Migrations
                         principalTable: "fediverse_actors",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "fk_boosts_posts_post_id",
-                        column: x => x.post_id,
-                        principalTable: "posts",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1080,12 +815,6 @@ namespace DysonNetwork.Sphere.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_post_awards", x => x.id);
-                    table.ForeignKey(
-                        name: "fk_post_awards_posts_post_id",
-                        column: x => x.post_id,
-                        principalTable: "posts",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1102,12 +831,6 @@ namespace DysonNetwork.Sphere.Migrations
                         name: "fk_post_category_links_post_categories_categories_id",
                         column: x => x.categories_id,
                         principalTable: "post_categories",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "fk_post_category_links_posts_posts_id",
-                        column: x => x.posts_id,
-                        principalTable: "posts",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1128,12 +851,6 @@ namespace DysonNetwork.Sphere.Migrations
                         principalTable: "post_collections",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "fk_post_collection_links_posts_posts_id",
-                        column: x => x.posts_id,
-                        principalTable: "posts",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1151,12 +868,6 @@ namespace DysonNetwork.Sphere.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_post_featured_records", x => x.id);
-                    table.ForeignKey(
-                        name: "fk_post_featured_records_posts_post_id",
-                        column: x => x.post_id,
-                        principalTable: "posts",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1183,12 +894,6 @@ namespace DysonNetwork.Sphere.Migrations
                         column: x => x.actor_id,
                         principalTable: "fediverse_actors",
                         principalColumn: "id");
-                    table.ForeignKey(
-                        name: "fk_post_reactions_posts_post_id",
-                        column: x => x.post_id,
-                        principalTable: "posts",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1207,18 +912,126 @@ namespace DysonNetwork.Sphere.Migrations
                         principalTable: "post_tags",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "posts",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    title = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
+                    description = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: true),
+                    slug = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
+                    edited_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    drafted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    published_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    visibility = table.Column<int>(type: "integer", nullable: false),
+                    content = table.Column<string>(type: "text", nullable: true),
+                    content_type = table.Column<int>(type: "integer", nullable: false),
+                    type = table.Column<int>(type: "integer", nullable: false),
+                    pin_mode = table.Column<int>(type: "integer", nullable: true),
+                    metadata = table.Column<Dictionary<string, object>>(type: "jsonb", nullable: true),
+                    sensitive_marks = table.Column<string>(type: "jsonb", nullable: true),
+                    embed_view = table.Column<PostEmbedView>(type: "jsonb", nullable: true),
+                    fediverse_uri = table.Column<string>(type: "character varying(8192)", maxLength: 8192, nullable: true),
+                    fediverse_type = table.Column<int>(type: "integer", nullable: true),
+                    language = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
+                    mentions = table.Column<List<ContentMention>>(type: "jsonb", nullable: true),
+                    boost_count = table.Column<int>(type: "integer", nullable: false),
+                    actor_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    views_unique = table.Column<int>(type: "integer", nullable: false),
+                    views_total = table.Column<int>(type: "integer", nullable: false),
+                    upvotes = table.Column<int>(type: "integer", nullable: false),
+                    downvotes = table.Column<int>(type: "integer", nullable: false),
+                    awarded_score = table.Column<decimal>(type: "numeric", nullable: false),
+                    replies_count = table.Column<int>(type: "integer", nullable: false),
+                    reaction_score = table.Column<int>(type: "integer", nullable: false),
+                    replied_gone = table.Column<bool>(type: "boolean", nullable: false),
+                    forwarded_gone = table.Column<bool>(type: "boolean", nullable: false),
+                    replied_post_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    forwarded_post_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    quote_authorization_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    realm_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    attachments = table.Column<List<SnCloudFileReferenceObject>>(type: "jsonb", nullable: false),
+                    publisher_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    shadowban_reason = table.Column<int>(type: "integer", nullable: true),
+                    shadowbanned_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    locked_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
+                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_posts", x => x.id);
                     table.ForeignKey(
-                        name: "fk_post_tag_links_posts_posts_id",
-                        column: x => x.posts_id,
+                        name: "fk_posts_fediverse_actors_actor_id",
+                        column: x => x.actor_id,
+                        principalTable: "fediverse_actors",
+                        principalColumn: "id");
+                    table.ForeignKey(
+                        name: "fk_posts_posts_forwarded_post_id",
+                        column: x => x.forwarded_post_id,
                         principalTable: "posts",
                         principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "fk_posts_posts_replied_post_id",
+                        column: x => x.replied_post_id,
+                        principalTable: "posts",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "fk_posts_publishers_publisher_id",
+                        column: x => x.publisher_id,
+                        principalTable: "publishers",
+                        principalColumn: "id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "quote_authorizations",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    fediverse_uri = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
+                    author_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    interacting_object_uri = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: false),
+                    interaction_target_uri = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: false),
+                    target_post_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    quote_post_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    is_valid = table.Column<bool>(type: "boolean", nullable: false),
+                    revoked_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true),
+                    created_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<Instant>(type: "timestamp with time zone", nullable: false),
+                    deleted_at = table.Column<Instant>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_quote_authorizations", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_quote_authorizations_fediverse_actors_author_id",
+                        column: x => x.author_id,
+                        principalTable: "fediverse_actors",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_quote_authorizations_posts_quote_post_id",
+                        column: x => x.quote_post_id,
+                        principalTable: "posts",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "fk_quote_authorizations_posts_target_post_id",
+                        column: x => x.target_post_id,
+                        principalTable: "posts",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "ix_automod_rules_name",
+                name: "ix_automod_rules_name_deleted_at",
                 table: "automod_rules",
-                column: "name",
+                columns: new[] { "name", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1232,9 +1045,9 @@ namespace DysonNetwork.Sphere.Migrations
                 column: "post_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_discovery_preferences_account_id_kind_reference_id",
+                name: "ix_discovery_preferences_account_id_kind_reference_id_deleted_",
                 table: "discovery_preferences",
-                columns: new[] { "account_id", "kind", "reference_id" },
+                columns: new[] { "account_id", "kind", "reference_id", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1243,15 +1056,26 @@ namespace DysonNetwork.Sphere.Migrations
                 column: "instance_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_fediverse_actors_uri",
+                name: "ix_fediverse_actors_uri_deleted_at",
                 table: "fediverse_actors",
-                column: "uri",
+                columns: new[] { "uri", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_fediverse_instances_domain",
+                name: "ix_fediverse_instances_domain_deleted_at",
                 table: "fediverse_instances",
-                column: "domain",
+                columns: new[] { "domain", "deleted_at" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_fediverse_keys_actor_id",
+                table: "fediverse_keys",
+                column: "actor_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_fediverse_keys_key_id_deleted_at",
+                table: "fediverse_keys",
+                columns: new[] { "key_id", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1335,9 +1159,9 @@ namespace DysonNetwork.Sphere.Migrations
                 column: "post_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_post_interest_profiles_account_id_kind_reference_id",
+                name: "ix_post_interest_profiles_account_id_kind_reference_id_deleted",
                 table: "post_interest_profiles",
-                columns: new[] { "account_id", "kind", "reference_id" },
+                columns: new[] { "account_id", "kind", "reference_id", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1371,6 +1195,11 @@ namespace DysonNetwork.Sphere.Migrations
                 column: "publisher_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_posts_quote_authorization_id",
+                table: "posts",
+                column: "quote_authorization_id");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_posts_replied_post_id",
                 table: "posts",
                 column: "replied_post_id");
@@ -1391,31 +1220,46 @@ namespace DysonNetwork.Sphere.Migrations
                 column: "publisher_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_publishers_name",
+                name: "ix_publishers_name_deleted_at",
                 table: "publishers",
-                column: "name",
+                columns: new[] { "name", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_sn_auth_session_client_id",
-                table: "sn_auth_session",
-                column: "client_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_sn_auth_session_parent_session_id",
-                table: "sn_auth_session",
-                column: "parent_session_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_sn_realm_slug",
-                table: "sn_realm",
-                column: "slug",
+                name: "ix_publishing_settings_account_id_deleted_at",
+                table: "publishing_settings",
+                columns: new[] { "account_id", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_sn_realm_label_realm_id",
-                table: "sn_realm_label",
-                column: "realm_id");
+                name: "ix_publishing_settings_default_fediverse_publisher_id",
+                table: "publishing_settings",
+                column: "default_fediverse_publisher_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_publishing_settings_default_posting_publisher_id",
+                table: "publishing_settings",
+                column: "default_posting_publisher_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_publishing_settings_default_reply_publisher_id",
+                table: "publishing_settings",
+                column: "default_reply_publisher_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_quote_authorizations_author_id",
+                table: "quote_authorizations",
+                column: "author_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_quote_authorizations_quote_post_id",
+                table: "quote_authorizations",
+                column: "quote_post_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_quote_authorizations_target_post_id",
+                table: "quote_authorizations",
+                column: "target_post_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_sticker_pack_ownerships_pack_id",
@@ -1423,9 +1267,9 @@ namespace DysonNetwork.Sphere.Migrations
                 column: "pack_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_sticker_packs_prefix",
+                name: "ix_sticker_packs_prefix_deleted_at",
                 table: "sticker_packs",
-                column: "prefix",
+                columns: new[] { "prefix", "deleted_at" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1442,11 +1286,91 @@ namespace DysonNetwork.Sphere.Migrations
                 name: "ix_stickers_slug",
                 table: "stickers",
                 column: "slug");
+
+            migrationBuilder.AddForeignKey(
+                name: "fk_boosts_posts_post_id",
+                table: "boosts",
+                column: "post_id",
+                principalTable: "posts",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "fk_post_awards_posts_post_id",
+                table: "post_awards",
+                column: "post_id",
+                principalTable: "posts",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "fk_post_category_links_posts_posts_id",
+                table: "post_category_links",
+                column: "posts_id",
+                principalTable: "posts",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "fk_post_collection_links_posts_posts_id",
+                table: "post_collection_links",
+                column: "posts_id",
+                principalTable: "posts",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "fk_post_featured_records_posts_post_id",
+                table: "post_featured_records",
+                column: "post_id",
+                principalTable: "posts",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "fk_post_reactions_posts_post_id",
+                table: "post_reactions",
+                column: "post_id",
+                principalTable: "posts",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "fk_post_tag_links_posts_posts_id",
+                table: "post_tag_links",
+                column: "posts_id",
+                principalTable: "posts",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "fk_posts_quote_authorizations_quote_authorization_id",
+                table: "posts",
+                column: "quote_authorization_id",
+                principalTable: "quote_authorizations",
+                principalColumn: "id",
+                onDelete: ReferentialAction.SetNull);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "fk_posts_fediverse_actors_actor_id",
+                table: "posts");
+
+            migrationBuilder.DropForeignKey(
+                name: "fk_quote_authorizations_fediverse_actors_author_id",
+                table: "quote_authorizations");
+
+            migrationBuilder.DropForeignKey(
+                name: "fk_quote_authorizations_posts_quote_post_id",
+                table: "quote_authorizations");
+
+            migrationBuilder.DropForeignKey(
+                name: "fk_quote_authorizations_posts_target_post_id",
+                table: "quote_authorizations");
+
             migrationBuilder.DropTable(
                 name: "activity_pub_deliveries");
 
@@ -1457,7 +1381,13 @@ namespace DysonNetwork.Sphere.Migrations
                 name: "boosts");
 
             migrationBuilder.DropTable(
+                name: "delivery_dead_letters");
+
+            migrationBuilder.DropTable(
                 name: "discovery_preferences");
+
+            migrationBuilder.DropTable(
+                name: "fediverse_keys");
 
             migrationBuilder.DropTable(
                 name: "fediverse_moderation_rules");
@@ -1514,31 +1444,7 @@ namespace DysonNetwork.Sphere.Migrations
                 name: "publisher_subscriptions");
 
             migrationBuilder.DropTable(
-                name: "sn_account_auth_factor");
-
-            migrationBuilder.DropTable(
-                name: "sn_account_badge");
-
-            migrationBuilder.DropTable(
-                name: "sn_account_connection");
-
-            migrationBuilder.DropTable(
-                name: "sn_account_contact");
-
-            migrationBuilder.DropTable(
-                name: "sn_account_profile");
-
-            migrationBuilder.DropTable(
-                name: "sn_account_status");
-
-            migrationBuilder.DropTable(
-                name: "sn_auth_challenge");
-
-            migrationBuilder.DropTable(
-                name: "sn_auth_session");
-
-            migrationBuilder.DropTable(
-                name: "sn_realm_label");
+                name: "publishing_settings");
 
             migrationBuilder.DropTable(
                 name: "sticker_pack_ownerships");
@@ -1562,25 +1468,22 @@ namespace DysonNetwork.Sphere.Migrations
                 name: "post_tags");
 
             migrationBuilder.DropTable(
-                name: "posts");
-
-            migrationBuilder.DropTable(
-                name: "sn_auth_client");
-
-            migrationBuilder.DropTable(
-                name: "sn_realm");
-
-            migrationBuilder.DropTable(
                 name: "sticker_packs");
 
             migrationBuilder.DropTable(
                 name: "fediverse_actors");
 
             migrationBuilder.DropTable(
+                name: "fediverse_instances");
+
+            migrationBuilder.DropTable(
+                name: "posts");
+
+            migrationBuilder.DropTable(
                 name: "publishers");
 
             migrationBuilder.DropTable(
-                name: "fediverse_instances");
+                name: "quote_authorizations");
         }
     }
 }
