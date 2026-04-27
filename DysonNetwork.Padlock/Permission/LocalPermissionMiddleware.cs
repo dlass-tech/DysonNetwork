@@ -29,6 +29,28 @@ public class LocalPermissionMiddleware(RequestDelegate next, ILogger<LocalPermis
                 return;
             }
 
+            var currentSession = httpContext.Items["CurrentSession"] as SnAuthSession;
+
+            if (PermissionScopeGate.HasFullScope(currentSession))
+            {
+                await next(httpContext);
+                return;
+            }
+
+            if (PermissionScopeGate.ShouldEnforcePermissionScope(currentSession) &&
+                !PermissionScopeGate.IsPermissionEnabled(currentSession!.Scopes, attr.Key))
+            {
+                logger.LogWarning(
+                    "Permission omitted by token scope for user {UserId}: required_key={RequiredKey}, matched_scope={MatchedScope}",
+                    currentUser.Id,
+                    attr.Key,
+                    PermissionScopeGate.GetMatchedPermissionScope(currentSession.Scopes, attr.Key) ?? "<none>"
+                );
+                httpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await httpContext.Response.WriteAsync("Permission omitted by token scope");
+                return;
+            }
+
             if (currentUser.IsSuperuser)
             {
                 // Bypass the permission check for performance
@@ -44,7 +66,14 @@ public class LocalPermissionMiddleware(RequestDelegate next, ILogger<LocalPermis
 
                 if (!permNode)
                 {
-                    logger.LogWarning("Permission denied for user {UserId}: {Key}", currentUser.Id, attr.Key);
+                    logger.LogWarning(
+                        "Permission denied for user {UserId}: required_key={RequiredKey}, matched_scope={MatchedScope}",
+                        currentUser.Id,
+                        attr.Key,
+                        currentSession is not null
+                            ? PermissionScopeGate.GetMatchedPermissionScope(currentSession.Scopes, attr.Key) ?? "<none>"
+                            : "<session-unavailable>"
+                    );
                     httpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
                     await httpContext.Response.WriteAsync("Insufficient permissions");
                     return;
