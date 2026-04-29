@@ -66,6 +66,12 @@ public class ModelConfiguration
     public string? CustomModelName { get; set; }
 
     /// <summary>
+    /// Transport API mode. Supported values: "responses" and "chat".
+    /// Defaults to "chat".
+    /// </summary>
+    public string? ApiMode { get; set; }
+
+    /// <summary>
     /// Custom parameters specific to this configuration
     /// </summary>
     public Dictionary<string, object> Parameters { get; set; } = new();
@@ -73,33 +79,33 @@ public class ModelConfiguration
     /// <summary>
     /// Gets the effective temperature (override or model default)
     /// </summary>
-    public double GetEffectiveTemperature()
+    public double GetEffectiveTemperature(ModelRegistry? modelRegistry = null)
     {
         if (Temperature.HasValue)
             return Temperature.Value;
 
-        var model = ModelRegistry.GetById(ModelId);
+        var model = modelRegistry?.GetById(ModelId);
         return model?.DefaultTemperature ?? 0.7;
     }
 
     /// <summary>
     /// Gets the effective reasoning effort (override or model default)
     /// </summary>
-    public string? GetEffectiveReasoningEffort()
+    public string? GetEffectiveReasoningEffort(ModelRegistry? modelRegistry = null)
     {
         if (!string.IsNullOrEmpty(ReasoningEffort))
             return ReasoningEffort;
 
-        var model = ModelRegistry.GetById(ModelId);
+        var model = modelRegistry?.GetById(ModelId);
         return model?.DefaultReasoningEffort;
     }
 
     /// <summary>
     /// Gets the ModelRef for this configuration with custom overrides applied
     /// </summary>
-    public ModelRef? GetModelRef()
+    public ModelRef? GetModelRef(ModelRegistry? modelRegistry = null)
     {
-        var modelRef = ModelRegistry.GetById(ModelId);
+        var modelRef = modelRegistry?.GetById(ModelId);
         if (modelRef == null) return null;
 
         // Apply custom overrides if specified
@@ -114,49 +120,57 @@ public class ModelConfiguration
     /// <summary>
     /// Gets the effective provider name (custom override or from ModelRegistry)
     /// </summary>
-    public string GetEffectiveProvider()
+    public string GetEffectiveProvider(ModelRegistry? modelRegistry = null)
     {
         if (!string.IsNullOrEmpty(Provider))
             return Provider;
 
-        var modelRef = ModelRegistry.GetById(ModelId);
+        var modelRef = modelRegistry?.GetById(ModelId);
         return modelRef?.Provider ?? "openrouter";
     }
 
     /// <summary>
     /// Gets the effective model name (custom override or from ModelRegistry)
     /// </summary>
-    public string GetEffectiveModelName()
+    public string GetEffectiveModelName(ModelRegistry? modelRegistry = null)
     {
         if (!string.IsNullOrEmpty(CustomModelName))
             return CustomModelName;
 
-        var modelRef = ModelRegistry.GetById(ModelId);
+        var modelRef = modelRegistry?.GetById(ModelId);
         return modelRef?.ModelName ?? ModelId;
     }
 
     /// <summary>
     /// Gets the effective base URL (custom override or from ModelRegistry)
     /// </summary>
-    public string? GetEffectiveBaseUrl()
+    public string? GetEffectiveBaseUrl(ModelRegistry? modelRegistry = null)
     {
         if (!string.IsNullOrEmpty(BaseUrl))
             return BaseUrl;
 
-        var modelRef = ModelRegistry.GetById(ModelId);
+        var modelRef = modelRegistry?.GetById(ModelId);
         return modelRef?.BaseUrl;
     }
 
     /// <summary>
     /// Gets the effective API key (custom override or from ModelRegistry)
     /// </summary>
-    public string? GetEffectiveApiKey()
+    public string? GetEffectiveApiKey(ModelRegistry? modelRegistry = null)
     {
         if (!string.IsNullOrEmpty(ApiKey))
             return ApiKey;
 
-        var modelRef = ModelRegistry.GetById(ModelId);
+        var modelRef = modelRegistry?.GetById(ModelId);
         return modelRef?.ApiKey;
+    }
+
+    /// <summary>
+    /// Gets the effective API mode (override or default).
+    /// </summary>
+    public string GetEffectiveApiMode()
+    {
+        return string.IsNullOrWhiteSpace(ApiMode) ? "chat" : ApiMode.Trim().ToLowerInvariant();
     }
 
     /// <summary>
@@ -165,15 +179,6 @@ public class ModelConfiguration
     public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var results = new List<ValidationResult>();
-
-        // Validate ModelId exists in registry
-        if (!string.IsNullOrEmpty(ModelId) && !ModelRegistry.IsValid(ModelId))
-        {
-            results.Add(new ValidationResult(
-                $"ModelId '{ModelId}' is not registered in ModelRegistry. " +
-                $"Available models: {string.Join(", ", ModelRegistry.All.Select(m => m.Id))}",
-                new[] { nameof(ModelId) }));
-        }
 
         // Validate temperature range
         if (Temperature.HasValue && (Temperature.Value < 0 || Temperature.Value > 2))
@@ -192,6 +197,17 @@ public class ModelConfiguration
                 results.Add(new ValidationResult(
                     "ReasoningEffort must be one of: low, medium, high",
                     new[] { nameof(ReasoningEffort) }));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(ApiMode))
+        {
+            var validApiModes = new[] { "responses", "chat" };
+            if (!validApiModes.Contains(ApiMode.Trim().ToLowerInvariant()))
+            {
+                results.Add(new ValidationResult(
+                    "ApiMode must be one of: responses, chat",
+                    new[] { nameof(ApiMode) }));
             }
         }
 
@@ -215,6 +231,7 @@ public class ModelConfiguration
             BaseUrl = BaseUrl,
             ApiKey = ApiKey,
             CustomModelName = CustomModelName,
+            ApiMode = ApiMode,
             Parameters = new Dictionary<string, object>(Parameters)
         };
 
