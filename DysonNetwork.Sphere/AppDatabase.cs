@@ -20,6 +20,7 @@ public class AppDatabase(
     public DbSet<SnPublisherSubscription> PublisherSubscriptions { get; set; } = null!;
     public DbSet<SnPublisherFeature> PublisherFeatures { get; set; } = null!;
     public DbSet<SnPublisherFollowRequest> PublisherFollowRequests { get; set; } = null!;
+    public DbSet<SnPublisherRatingRecord> PublisherRatingRecords { get; set; } = null!;
 
     public DbSet<SnPost> Posts { get; set; } = null!;
     public DbSet<SnPostReaction> PostReactions { get; set; } = null!;
@@ -113,6 +114,12 @@ public class AppDatabase(
             .HasForeignKey(fr => fr.PublisherId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<SnPublisherRatingRecord>()
+            .HasOne(r => r.Publisher)
+            .WithMany(p => p.RatingRecords)
+            .HasForeignKey(r => r.PublisherId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<SnPost>()
             .HasOne(p => p.RepliedPost)
             .WithMany()
@@ -132,6 +139,13 @@ public class AppDatabase(
             .HasMany(p => p.Tags)
             .WithMany(t => t.Posts)
             .UsingEntity(j => j.ToTable("post_tag_links"));
+
+        modelBuilder.Entity<SnPostTag>()
+            .HasOne(t => t.OwnerPublisher)
+            .WithMany()
+            .HasForeignKey(t => t.OwnerPublisherId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<SnPost>()
             .HasMany(p => p.Categories)
             .WithMany(c => c.Posts)

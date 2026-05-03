@@ -27,6 +27,7 @@ public class PublisherService(
     AppDatabase db,
     DySocialCreditService.DySocialCreditServiceClient socialCredits,
     DyExperienceService.DyExperienceServiceClient experiences,
+    PublisherRatingService ratingService,
     ICacheService cache,
     ILocalizationService localization,
     RemoteAccountService remoteAccounts,
@@ -853,6 +854,145 @@ public class PublisherService(
                 });
             }
         }
+
+        // Foreach loop through publishers to set rating
+        foreach (var (publisherId, value) in publisherStats)
+        {
+            var upvotes = value.Upvotes;
+            var downvotes = value.Downvotes;
+            var awardScore = value.AwardScore;
+
+            var netVotes = upvotes - downvotes;
+            var points = netVotes + awardScore * 0.1;
+            var ratingDelta = (int)points;
+
+            if (ratingDelta == 0) continue;
+
+            var publisherName = publishers.TryGetValue(publisherId, out var pub) ? pub.Name : "unknown";
+
+            await ratingService.AddRecord(
+                "publishers.rewards",
+                localization.Get("publishingRewardTitle", "en",
+                    new { publisher = $"@{publisherName}", date }),
+                ratingDelta,
+                publisherId
+            );
+        }
+    }
+
+    public async Task<Dictionary<Guid, double>> AggressiveResettle(
+        Instant dateFrom,
+        Instant dateTo,
+        Guid? publisherId = null
+    )
+    {
+        var publisherStats = new Dictionary<Guid, dynamic>();
+
+        var currentDate = dateFrom.InZone(DateTimeZone.Utc).Date;
+        var endDate = dateTo.InZone(DateTimeZone.Utc).Date;
+
+        while (currentDate <= endDate)
+        {
+            var periodStart = currentDate.AtStartOfDayInZone(DateTimeZone.Utc).ToInstant();
+            var periodEnd = periodStart.Plus(Duration.FromDays(1)).Minus(Duration.FromMilliseconds(1));
+
+            var postsInPeriod = await db.Posts
+                .Where(p => p.CreatedAt >= periodStart && p.CreatedAt <= periodEnd)
+                .Where(p => p.PublisherId.HasValue)
+                .Where(p => publisherId == null || p.PublisherId == publisherId)
+                .Select(p => new { Id = p.Id, PublisherId = p.PublisherId!.Value, AwardedScore = p.AwardedScore })
+                .ToListAsync();
+
+            var postIds = postsInPeriod.Select(p => p.Id).ToList();
+            var reactions = await db.PostReactions
+                .Where(r => postIds.Contains(r.PostId))
+                .ToListAsync();
+
+            var postIdToPublisher = postsInPeriod
+                .ToDictionary(p => p.Id, p => p.PublisherId);
+
+            var dayStats = postsInPeriod
+                .GroupBy(p => p.PublisherId)
+                .ToDictionary(g => g.Key,
+                    g => new
+                    {
+                        PostCount = g.Count(),
+                        Upvotes = 0,
+                        Downvotes = 0,
+                        AwardScore = g.Sum(p => (double)p.AwardedScore)
+                    });
+
+            foreach (var reaction in reactions.Where(r => r.Attitude == Shared.Models.PostReactionAttitude.Positive))
+            {
+                if (!postIdToPublisher.TryGetValue(reaction.PostId, out var pubId) ||
+                    !dayStats.TryGetValue(pubId, out var stat)) continue;
+                stat = new { stat.PostCount, Upvotes = stat.Upvotes + 1, stat.Downvotes, stat.AwardScore };
+                dayStats[pubId] = stat;
+            }
+
+            foreach (var reaction in reactions.Where(r => r.Attitude == Shared.Models.PostReactionAttitude.Negative))
+            {
+                if (!postIdToPublisher.TryGetValue(reaction.PostId, out var pubId) ||
+                    !dayStats.TryGetValue(pubId, out var stat)) continue;
+                stat = new { stat.PostCount, stat.Upvotes, Downvotes = stat.Downvotes + 1, stat.AwardScore };
+                dayStats[pubId] = stat;
+            }
+
+            foreach (var (pubId, stat) in dayStats)
+            {
+                if (!publisherStats.ContainsKey(pubId))
+                {
+                    publisherStats[pubId] = new
+                    {
+                        PostCount = 0, Upvotes = 0, Downvotes = 0, AwardScore = 0.0
+                    };
+                }
+
+                var existing = publisherStats[pubId];
+                publisherStats[pubId] = new
+                {
+                    PostCount = existing.PostCount + stat.PostCount,
+                    Upvotes = existing.Upvotes + stat.Upvotes,
+                    Downvotes = existing.Downvotes + stat.Downvotes,
+                    AwardScore = existing.AwardScore + stat.AwardScore
+                };
+            }
+
+            currentDate = currentDate.PlusDays(1);
+        }
+
+        var results = new Dictionary<Guid, double>();
+
+        foreach (var (pubId, stat) in publisherStats)
+        {
+            var upvotes = stat.Upvotes;
+            var downvotes = stat.Downvotes;
+            var awardScore = stat.AwardScore;
+
+            var netVotes = upvotes - downvotes;
+            var points = netVotes + awardScore * 0.1;
+            var ratingDelta = (int)points;
+
+            if (ratingDelta == 0) continue;
+
+            var publisher = await db.Publishers
+                .Where(p => p.Id == pubId)
+                .Select(p => new { p.Name })
+                .FirstOrDefaultAsync();
+
+            var publisherName = publisher?.Name ?? "unknown";
+
+            await ratingService.AddRecord(
+                "publishers.resettle",
+                $"Resettle {dateFrom.InZone(DateTimeZone.Utc).Date:yyyy-MM-dd} to {dateTo.InZone(DateTimeZone.Utc).Date:yyyy-MM-dd}",
+                ratingDelta,
+                pubId
+            );
+
+            results[pubId] = ratingDelta;
+        }
+
+        return results;
     }
 
     private string Domain => configuration["ActivityPub:Domain"] ?? "localhost";

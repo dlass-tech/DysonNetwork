@@ -24,7 +24,9 @@ public class AccountAdminController(
     RemoteRingService ring,
     ILocalizationService localizer,
     DyProfileService.DyProfileServiceClient profiles,
-    DySocialCreditService.DySocialCreditServiceClient socialCredits
+    DySocialCreditService.DySocialCreditServiceClient socialCredits,
+    DyPublisherService.DyPublisherServiceClient publishers,
+    DyPublisherRatingService.DyPublisherRatingServiceClient publisherRatings
 ) : ControllerBase
 {
     [HttpGet("punishments/created")]
@@ -63,6 +65,8 @@ public class AccountAdminController(
         public PunishmentType Type { get; set; }
         public List<string>? BlockedPermissions { get; set; }
         public double? SocialCreditReduction { get; set; }
+        public double? PublisherRatingReduction { get; set; }
+        public List<string>? PublisherNames { get; set; }
     }
 
     [HttpPost("{name}/punishments")]
@@ -117,6 +121,30 @@ public class AccountAdminController(
                 ExpiredAt = request.ExpiredAt?.ToTimestamp() ?? SystemClock.Instance.GetCurrentInstant()
                     .Plus(Duration.FromDays(365)).ToTimestamp(),
             });
+        }
+
+        if (request.PublisherRatingReduction is > 0 && request.PublisherNames is { Count: > 0 })
+        {
+            foreach (var publisherName in request.PublisherNames)
+            {
+                try
+                {
+                    var publisherResp = await publishers.GetPublisherAsync(
+                        new DyGetPublisherRequest { Name = publisherName });
+                    var publisherId = publisherResp.Publisher.Id;
+                    await publisherRatings.AddRecordAsync(new DyAddPublisherRatingRecordRequest
+                    {
+                        PublisherId = publisherId,
+                        Delta = -request.PublisherRatingReduction.Value,
+                        Reason = $"{title} {request.Reason}",
+                        ReasonType = "punishments",
+                    });
+                }
+                catch
+                {
+                    // ignored - publisher may not exist
+                }
+            }
         }
 
         try
